@@ -1,85 +1,38 @@
-const path = require('path')
-const Products = require('./products')
-const autoCatch = require('./lib/auto-catch')
+const express = require('express')
+const api = require('./api')
+const middleware = require('./middleware')
+const bodyParser = require('body-parser')
 
-/**
- * Handle the root route
- * @param {object} req
- * @param {object} res
-*/
-function handleRoot(req, res) {
-  res.sendFile(path.join(__dirname, '/index.html'));
-}
+// Set the port for the server
+const port = process.env.PORT || 3000
 
-/**
- * List all products
- * @param {object} req
- * @param {object} res
- */
-async function listProducts(req, res) {
-  // Extract the limit and offset query parameters
-  const { offset = 0, limit = 25, tag } = req.query
-  // Pass the limit and offset to the Products service
-  res.json(await Products.list({
-    offset: Number(offset),
-    limit: Number(limit),
-    tag
-  }))
-}
+// Initialize the Express app
+const app = express()
 
+// Serve static files from the public directory
+app.use(express.static(__dirname + '/public'))
 
-/**
- * Get a single product
- * @param {object} req
- * @param {object} res
- */
-async function getProduct(req, res, next) {
-  const { id } = req.params
+// Register middleware to parse JSON bodies
+app.use(bodyParser.json())
 
-  const product = await Products.get(id)
-  if (!product) {
-    return next()
-  }
+// Apply custom CORS middleware
+app.use(middleware.cors)
 
-  return res.json(product)
-}
+// Define the root route
+app.get('/', api.handleRoot)
 
-/**
- * Create a product
- * @param {object} req 
- * @param {object} res 
- */
-async function createProduct(req, res) {
-  console.log('request body:', req.body)
-  res.json(req.body)
-}
+// Define routes for managing products
+app.get('/products', api.listProducts)
+app.get('/products/:id', api.getProduct)
+app.put('/products/:id', api.editProduct)
+app.delete('/products/:id', api.deleteProduct)
+app.post('/products', api.createProduct)
 
-/**
- * Edit a product
- * @param {object} req
- * @param {object} res
- * @param {function} next
- */
-async function editProduct(req, res, next) {
-  console.log(req.body)
-  res.json(req.body)
-}
+// Define routes for managing orders
+app.get('/orders', api.listOrders)
+app.post('/orders/', api.createOrder)
+app.put('/orders/:id', api.editOrder)
+app.delete('/orders/:id', api.deleteOrder)
 
-/**
- * Delete a product
- * @param {*} req 
- * @param {*} res 
- * @param {*} next 
- */
-async function deleteProduct(req, res, next) {
-  res.json({ success: true })
-}
-
-module.exports = autoCatch({
-  handleRoot,
-  listProducts,
-  getProduct,
-  createProduct,
-  editProduct,
-  deleteProduct
-});
+// Start the server and listen on the defined port
+app.listen(port, () => console.log(`Server listening on port ${port}`))
